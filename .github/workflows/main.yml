@@ -1,0 +1,38 @@
+name: UMKM Growth Kit - Scheduled Scraper
+
+on:
+  schedule:
+    # 10:00 UTC = 17:00 WIB (1 jam sebelum Apps Script trigger jam 18:00 WIB,
+    # sebagai buffer karena cron GitHub Actions tidak selalu tepat waktu --
+    # bisa delay beberapa menit, terutama saat traffic GitHub sedang tinggi)
+    - cron: '0 10 * * *'
+  workflow_dispatch:
+    # Tombol "Run workflow" manual di tab Actions -- penting untuk testing
+    # sekarang juga, tanpa harus menunggu jadwal cron besok jam 17:00 WIB
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Write credentials.json from secret
+        env:
+          GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+        run: printf '%s' "$GOOGLE_CREDENTIALS_JSON" > credentials.json
+
+      - name: Run pipeline
+        run: python main_pipeline.py
+
+      - name: Clean up credentials
+        if: always()
+        run: rm -f credentials.json
