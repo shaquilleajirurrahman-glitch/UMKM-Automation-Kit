@@ -11,6 +11,7 @@ Fungsi:
 """
 
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import gspread
 from google.oauth2.service_account import Credentials
@@ -21,6 +22,18 @@ SHEET_TAB_DATA = "Data_Kompetitor"
 SHEET_TAB_LOG = "Log_Eksekusi"
 
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
+
+# Timezone eksplisit -- WAJIB, jangan andalkan jam sistem komputer yang
+# menjalankan script. Laptop lokal (WIB) dan server GitHub Actions (UTC)
+# punya jam sistem yang berbeda; tanpa ini, timestamp di Sheet akan beda
+# 7 jam tergantung dari mana pipeline dijalankan. zoneinfo bawaan Python
+# 3.9+, tidak perlu install dependency tambahan.
+WIB = ZoneInfo("Asia/Jakarta")
+
+
+def get_wib_timestamp():
+    """Timestamp WIB yang konsisten, terlepas dari timezone sistem host."""
+    return datetime.now(WIB).strftime("%Y-%m-%d %H:%M:%S")
 
 
 def connect_to_sheet():
@@ -56,7 +69,7 @@ def write_to_sheet(spreadsheet, data_list):
     # Satu timestamp untuk SELURUH batch -- bukan per-item.
     # Ini memastikan semua baris dalam satu eksekusi pipeline punya
     # waktu yang sama persis, memudahkan grouping/analisis nanti.
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    timestamp = get_wib_timestamp()
 
     rows = []
     for item in data_list:
@@ -88,7 +101,7 @@ def write_log(spreadsheet, status, jumlah_produk=0, error_message=""):
     try:
         worksheet = spreadsheet.worksheet(SHEET_TAB_LOG)
         log_row = [
-            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            get_wib_timestamp(),
             status,
             jumlah_produk,
             error_message,
