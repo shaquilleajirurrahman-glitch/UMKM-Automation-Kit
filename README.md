@@ -97,6 +97,9 @@ The scraper returns an empty list (`[]`) — rather than raising an exception �
 **4. Bulk writes over per-row API calls**
 Data is written to Google Sheets using a single `append_rows()` batch call per pipeline run, instead of looping `append_row()` per product. This keeps the pipeline well within Google Sheets API rate limits even as the product catalog grows.
 
+**5. Explicit timezone, not host system clock**
+`datetime.now()` is naive — it returns whatever wall-clock time the host machine happens to have. Since this pipeline runs from two different environments (a local Windows machine in WIB, and a GitHub Actions runner in UTC), relying on it produced timestamps that were 7 hours apart depending on where the script executed. The fix uses Python's `zoneinfo` to explicitly convert to `Asia/Jakarta` regardless of host timezone. One platform-specific catch: Windows doesn't ship with the IANA timezone database that `zoneinfo` needs, so `tzdata` was added as an explicit dependency — without it, the same code that worked fine on the Linux CI runner would raise `ZoneInfoNotFoundError` on a Windows machine.
+
 ### 📂 Project Structure
 
 ```
@@ -117,7 +120,7 @@ UMKM-Automation-Kit/
 
 **1. Clone and install dependencies**
 ```bash
-git clone git clone https://github.com/shaquilleajirurrahman-glitch/UMKM-Automation-Kit.git
+git clone https://github.com/shaquilleajirurrahman-glitch/UMKM-Automation-Kit.git
 cd UMKM-Automation-Kit
 pip install -r requirements.txt
 ```
@@ -142,20 +145,21 @@ python main_pipeline.py
 Add the contents of `credentials.json` as a repository secret named `GOOGLE_CREDENTIALS_JSON`, then push — the workflow runs on schedule and can also be triggered manually from the **Actions** tab.
 
 **6. Set up Apps Script reporting**
-Paste `Code.gs` into Extensions → Apps Script, update `RECIPIENT_EMAIL`, run both functions manually once to authorize, then add a time-driven trigger for `dailyAutomation`.
+Paste `Code.gs` into Extensions → Apps Script (`RECIPIENT_EMAIL` is already set to `shaquille41838@gmail.com`), run both functions manually once to authorize, then add a time-driven trigger for `dailyAutomation`.
 
 ### 📈 Sample Output
 
-![Google Sheets Dashboard](docs/dashboard.png)
+| Tanggal_Check | Nama_Produk | Harga_Kompetitor | Harga_Toko_Saya | Selisih | Link_Produk |
+|---|---|---|---|---|---|
+| 2026-06-28 17:00:00 | A Light in the Attic | 51.77 | 30.00 | 21.77 | [Lihat Produk](#) |
+| 2026-06-28 17:00:00 | The Requiem Red | 22.65 | 30.00 | -7.35 | [Lihat Produk](#) |
 
 Positive `Selisih` (green) means the user's store is more competitively priced; negative (red) flags a competitor undercutting the user's price.
-
 
 ### 🔭 Future Improvements
 
 - Replace the hardcoded `Harga_Toko_Saya` placeholder with a real lookup against the user's actual product catalog.
 - Support multiple competitor sources, not just a single catalog.
-- Add timezone-aware timestamps to avoid ambiguity between local-machine and CI runs.
 - Paginate scraping across multiple catalog pages for larger product sets.
 
 ### 📄 License
@@ -235,6 +239,9 @@ Scraper mengembalikan list kosong (`[]`) — bukan melempar exception — ketika
 **4. Bulk write, bukan API call per baris**
 Data ditulis ke Google Sheets memakai satu panggilan `append_rows()` per eksekusi pipeline, bukan loop `append_row()` per produk. Ini menjaga pipeline tetap jauh dari batas rate limit Google Sheets API walau katalog produk bertambah banyak.
 
+**5. Timezone eksplisit, bukan jam sistem host**
+`datetime.now()` itu naive — dia mengambil apa pun jam sistem yang dimiliki komputer yang menjalankannya. Karena pipeline ini berjalan dari dua lingkungan berbeda (laptop Windows lokal di WIB, dan runner GitHub Actions di UTC), mengandalkan ini menghasilkan timestamp yang beda 7 jam tergantung di mana script dieksekusi. Perbaikannya memakai `zoneinfo` Python untuk konversi eksplisit ke `Asia/Jakarta`, terlepas dari timezone host. Satu kuirk khusus platform: Windows tidak menyertakan database timezone IANA yang dibutuhkan `zoneinfo`, jadi `tzdata` ditambahkan sebagai dependency eksplisit — tanpa itu, kode yang sama yang berjalan lancar di runner Linux CI akan melempar `ZoneInfoNotFoundError` di komputer Windows.
+
 ### 📂 Struktur Proyek
 
 ```
@@ -280,11 +287,14 @@ python main_pipeline.py
 Tambahkan seluruh isi `credentials.json` sebagai repository secret bernama `GOOGLE_CREDENTIALS_JSON`, lalu push — workflow akan berjalan sesuai jadwal, dan juga bisa dipicu manual dari tab **Actions**.
 
 **6. Setup laporan Apps Script**
-Paste `Code.gs` ke Extensions → Apps Script, ganti `RECIPIENT_EMAIL`, jalankan kedua function secara manual sekali untuk otorisasi, lalu pasang time-driven trigger untuk `dailyAutomation`.
+Paste `Code.gs` ke Extensions → Apps Script (`RECIPIENT_EMAIL` sudah diset ke `shaquille41838@gmail.com`), jalankan kedua function secara manual sekali untuk otorisasi, lalu pasang time-driven trigger untuk `dailyAutomation`.
 
 ### 📈 Contoh Output
 
-![Dashboard Google Sheets](docs/dashboard.png)
+| Tanggal_Check | Nama_Produk | Harga_Kompetitor | Harga_Toko_Saya | Selisih | Link_Produk |
+|---|---|---|---|---|---|
+| 2026-06-28 17:00:00 | A Light in the Attic | 51.77 | 30.00 | 21.77 | [Lihat Produk](#) |
+| 2026-06-28 17:00:00 | The Requiem Red | 22.65 | 30.00 | -7.35 | [Lihat Produk](#) |
 
 `Selisih` positif (hijau) artinya toko pengguna lebih kompetitif; negatif (merah) menandakan kompetitor lebih murah.
 
@@ -292,7 +302,6 @@ Paste `Code.gs` ke Extensions → Apps Script, ganti `RECIPIENT_EMAIL`, jalankan
 
 - Mengganti placeholder `Harga_Toko_Saya` yang hardcoded dengan lookup nyata ke katalog produk pengguna.
 - Mendukung beberapa sumber kompetitor, tidak cuma satu katalog.
-- Menambahkan timestamp yang sadar timezone untuk menghindari ambiguitas antara run lokal dan run CI.
 - Pagination scraping ke beberapa halaman katalog untuk dataset yang lebih besar.
 
 ### 📄 Lisensi
