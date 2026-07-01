@@ -2,15 +2,8 @@ name: UMKM Growth Kit - Scheduled Scraper
 
 on:
   schedule:
-    # Sengaja TIDAK di angka bulat (xx:00) -- jadwal tepat di awal jam adalah
-    # waktu beban tertinggi di seluruh infrastruktur GitHub Actions (banyak
-    # repo lain di dunia juga menjadwalkan di jam bulat yang sama), sehingga
-    # rawan delay parah atau ter-skip. GitHub merekomendasikan offset beberapa
-    # menit untuk menghindari ini. 07:00 UTC = 17:07 WIB.
-    - cron: '7 10 * * *'
+    - cron: '37 21 * * *'
   workflow_dispatch:
-    # Tombol "Run workflow" manual di tab Actions -- penting untuk testing
-    # sekarang juga, tanpa harus menunggu jadwal cron besok jam 17:07 WIB
 
 jobs:
   run-pipeline:
